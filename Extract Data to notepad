@@ -1,0 +1,51 @@
+import h5py
+import numpy as np
+import pandas as pd
+
+file_path = r"D:\Project_3\Try_1\VNP46A2.A2017365.h08v06.002.2024338171705.h5"
+output_path = r"D:\Project_3\Try_1\nightlight_full_dataset.txt"
+
+with h5py.File(file_path, "r") as f:
+
+    data = f["HDFEOS"]["GRIDS"]["VIIRS_Grid_DNB_2d"]["Data Fields"]
+
+    ntl_gap = data["Gap_Filled_DNB_BRDF-Corrected_NTL"][:]
+    ntl_raw = data["DNB_BRDF-Corrected_NTL"][:]
+    lunar = data["DNB_Lunar_Irradiance"][:]
+    latest = data["Latest_High_Quality_Retrieval"][:]
+    quality = data["Mandatory_Quality_Flag"][:]
+    cloud = data["QF_Cloud_Mask"][:]
+    snow = data["Snow_Flag"][:]
+
+    lat = data["lat"][:]
+    lon = data["lon"][:]
+
+# clean invalid values
+ntl_gap = ntl_gap.astype(float)
+ntl_gap[ntl_gap < 0] = np.nan
+
+ntl_raw = ntl_raw.astype(float)
+ntl_raw[ntl_raw < 0] = np.nan
+
+# build coordinate grid
+lon_grid, lat_grid = np.meshgrid(lon, lat)
+
+df = pd.DataFrame({
+    "lat": lat_grid.flatten(),
+    "lon": lon_grid.flatten(),
+    "nightlight_gapfilled": ntl_gap.flatten(),
+    "nightlight_raw": ntl_raw.flatten(),
+    "lunar_irradiance": lunar.flatten(),
+    "latest_high_quality_days": latest.flatten(),
+    "quality_flag": quality.flatten(),
+    "cloud_mask": cloud.flatten(),
+    "snow_flag": snow.flatten()
+})
+
+df = df.dropna(subset=["nightlight_gapfilled"])
+
+# save as tab-separated text
+df.to_csv(output_path, sep="\t", index=False)
+
+print("Saved dataset to:", output_path)
+print("Rows:", len(df))
