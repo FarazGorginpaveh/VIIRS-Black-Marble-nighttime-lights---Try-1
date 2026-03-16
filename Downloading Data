@@ -1,0 +1,34 @@
+import os
+import earthaccess
+
+output_dir = r"D:\Project_3\Try_1"
+
+short_name = "VNP46A2"
+
+# One day only
+start_date = "2017-08-25"
+end_date   = "2017-08-25"
+
+# Houston bounding box
+bounding_box = (-96.0, 29.0, -94.0, 30.5)
+
+os.makedirs(output_dir, exist_ok=True)
+
+# login to NASA Earthdata
+earthaccess.login()
+
+# search dataset
+results = earthaccess.search_data(
+    short_name=short_name,
+    temporal=(start_date, end_date),
+    bounding_box=bounding_box,
+)
+
+print("Granules found:", len(results))
+
+# download files
+files = earthaccess.download(results, local_path=output_dir)
+
+print("Downloaded files:")
+for f in files:
+    print(f)
