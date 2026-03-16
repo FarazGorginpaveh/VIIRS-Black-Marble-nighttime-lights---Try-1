@@ -1,0 +1,77 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Mar 16 12:02:30 2026
+
+@author: mh01
+"""
+
+import h5py
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+data_dir = Path(r"D:\Project_3\Try_1")
+
+files = sorted(data_dir.glob("VNP46A2*.h5"))
+
+print("Available files:")
+for i, f in enumerate(files):
+    print(f"{i}: {f.name}")
+
+idx1 = int(input("Enter first file number: "))
+idx2 = int(input("Enter second file number: "))
+
+file1 = files[idx1]
+file2 = files[idx2]
+
+def read_viirs_h5(file_path):
+    with h5py.File(file_path, "r") as f:
+        data_fields = f["HDFEOS"]["GRIDS"]["VIIRS_Grid_DNB_2d"]["Data Fields"]
+
+        ntl = data_fields["Gap_Filled_DNB_BRDF-Corrected_NTL"][:].astype(float)
+        lat = data_fields["lat"][:]
+        lon = data_fields["lon"][:]
+
+        fill_value = data_fields["Gap_Filled_DNB_BRDF-Corrected_NTL"].attrs["_FillValue"][0]
+        ntl[ntl == fill_value] = np.nan
+        ntl[ntl < 0] = np.nan
+
+    return ntl, lat, lon
+
+ntl1, lat1, lon1 = read_viirs_h5(file1)
+ntl2, lat2, lon2 = read_viirs_h5(file2)
+
+vmin = 0
+vmax = 50
+
+fig, axes = plt.subplots(1, 2, figsize=(16, 7), constrained_layout=True)
+
+for ax, ntl, lat, lon, title in zip(
+    axes,
+    [ntl1, ntl2],
+    [lat1, lat2],
+    [lon1, lon2],
+    [file1.name, file2.name]
+):
+    extent = [lon.min(), lon.max(), lat.min(), lat.max()]
+
+    im = ax.imshow(
+        ntl,
+        extent=extent,
+        cmap="inferno",
+        vmin=vmin,
+        vmax=vmax,
+        origin="upper",
+        aspect="auto"
+    )
+
+    ax.set_title(title, fontsize=10)
+    ax.set_xlabel("Longitude")
+    ax.set_ylabel("Latitude")
+    ax.grid(True, linestyle="--", alpha=0.4)
+
+cbar = fig.colorbar(im, ax=axes, shrink=0.85)
+cbar.set_label("Nightlight Radiance (nW/cm²/sr)")
+
+plt.suptitle("VIIRS Black Marble Nighttime Lights Comparison", fontsize=14)
+plt.show()
